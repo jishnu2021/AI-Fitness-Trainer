@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import './App.css';
 import { useWallet } from './context/WalletProvider';
 import getQuote from './context/GetQuote';
-import { handleCheckAllowance } from './context/Checkallowance'; // Import your allowance function
-
+import checkAndSetAllowance from './context/Checkallowance';
+import { executeTransaction } from './context/Execute';
+import { ethers } from 'ethers';
 function App() {
   const { isAuthenticated, connectWallet, disconnectWallet } = useWallet();
   const [token1Address, setToken1Address] = useState("");
@@ -31,6 +32,38 @@ function App() {
     setQuoteData(data); // Update state with the fetched quote data
   };
 
+
+  const handleCheckAllowance = async (quoteData) => {
+    
+    if (window.ethereum) {
+        console.log('MetaMask detected');
+        try {
+            const accounts = await window.ethereum.request({
+                method: "eth_requestAccounts",
+            });
+            console.log(quoteData);
+            console.log(accounts[0]);
+            // const provider = new ethers.providers.JsonRpcProvider("https://rpc.ankr.com/optimism",10);
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            // const provider = new ethers.providers.Web3Provider(provider1,10);
+            // await provider.send('eth_requestAccounts', []);
+            const signer = provider.getSigner();
+            console.log("Hello ami signer : ",signer)
+            await checkAndSetAllowance(
+                signer,
+                '0x4200000000000000000000000000000000000006', // Replace with your token address
+                quoteData.allowanceTo, // quote.allowanceTo in getQuote(params) response
+                ethers.constants.MaxUint256 // Approving infinite allowance
+            );
+
+            console.log('Allowance checked and updated ✅');
+        } catch (err) {
+            console.error('Error:', err);
+        }
+    } else {
+        console.error('MetaMask not detected');
+    }
+};
   return (
     <div className="App">
       <header className="App-header">
@@ -88,7 +121,7 @@ function App() {
         />
         <button onClick={handleGetQuote}>Get Quote</button>
         <button onClick={() => handleCheckAllowance(quoteData)}>Check Allowance</button> {/* Pass quoteData */}
-        <button>Execute</button>
+        <button onClick={() => executeTransaction(token1Address, token1Address, quoteData)}>Execute</button>
       </div>
       <div>
         <p>
