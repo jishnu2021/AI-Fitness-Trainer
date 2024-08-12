@@ -3,8 +3,10 @@ import './App.css';
 import { useWallet } from './context/WalletProvider';
 import getQuote from './context/GetQuote';
 import checkAndSetAllowance from './context/Checkallowance';
-import { executeTransaction } from './context/Execute';
+import getTransaction from './context/Execute'
 import { ethers } from 'ethers';
+
+
 function App() {
   const { isAuthenticated, connectWallet, disconnectWallet } = useWallet();
   const [token1Address, setToken1Address] = useState("");
@@ -17,8 +19,14 @@ function App() {
   const [token1Balance, setToken1Balance] = useState(null);
   const [token2Balance, setToken2Balance] = useState(null);
   const [quoteData, setQuoteData] = useState(null); // State to store the quote data
+  const [chainId, setChainId] = useState(null);
+  const [account, setAccount] = useState(null);
+  const [step1, setStep1] = useState("");
+  const [step2, setStep2] = useState("");
+  const [step3, setStep3] = useState("");
 
   const handleGetQuote = async () => {
+    setStep1("");
     const params = {
       fromTokenAddress: '0x4200000000000000000000000000000000000006',
       toTokenAddress: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
@@ -30,11 +38,12 @@ function App() {
 
     const data = await getQuote(params);
     setQuoteData(data); // Update state with the fetched quote data
+    setStep1("✅");
+
   };
 
 
-  const handleCheckAllowance = async (quoteData) => {
-    
+const handleCheckAllowance = async (quoteData) => {
     if (window.ethereum) {
         console.log('MetaMask detected');
         try {
@@ -43,10 +52,8 @@ function App() {
             });
             console.log(quoteData);
             console.log(accounts[0]);
-            // const provider = new ethers.providers.JsonRpcProvider("https://rpc.ankr.com/optimism",10);
+            // const provider = new ethers.providers.JsonRpcProvider("https://optimism.llamarpc.com",10);
             const provider = new ethers.providers.Web3Provider(window.ethereum);
-            // const provider = new ethers.providers.Web3Provider(provider1,10);
-            // await provider.send('eth_requestAccounts', []);
             const signer = provider.getSigner();
             console.log("Hello ami signer : ",signer)
             await checkAndSetAllowance(
@@ -55,7 +62,6 @@ function App() {
                 quoteData.allowanceTo, // quote.allowanceTo in getQuote(params) response
                 ethers.constants.MaxUint256 // Approving infinite allowance
             );
-
             console.log('Allowance checked and updated ✅');
         } catch (err) {
             console.error('Error:', err);
@@ -64,6 +70,44 @@ function App() {
         console.error('MetaMask not detected');
     }
 };
+
+const handleExecute = async () => {
+  if(window.ethereum) {
+		console.log('detected');
+  
+		try {
+		  const accounts = await window.ethereum.request({
+			method: "eth_requestAccounts",
+		  });
+		  console.log(accounts[0])
+		  const provider = new ethers.providers.Web3Provider(window.ethereum);
+		  const signer = provider.getSigner();
+		  const txResponse = await getTransaction({
+			'fromTokenAddress': '0x4200000000000000000000000000000000000006',
+			'toTokenAddress': '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+			'fromTokenChainId': "10",
+			'toTokenChainId': "42161", // Fuji
+			'widgetId': 0, 
+		}, quoteData); // params have been defined in step 1 and quoteData has also been fetched in step 1
+	
+		// sending the transaction using the data given by the pathfinder
+		const tx = await signer.sendTransaction(txResponse.txn)
+		try {
+			await tx.wait();
+			console.log(`Transaction mined successfully: ${tx.hash}`)
+			alert(`Transaction mined successfully: ${tx.hash}`)
+			setStep3('✅')
+		}
+		catch (error) {
+			console.log(`Transaction failed with error: ${error}`)
+		}
+		}
+		catch(err) {
+		  console.log(err)
+		}
+	  }
+};
+
   return (
     <div className="App">
       <header className="App-header">
@@ -112,16 +156,10 @@ function App() {
           value={chainIdToken2}
           onChange={(e) => setChainIdToken2(e.target.value)}
         />
-        <input
-          type="text"
-          placeholder="Enter your amount"
-          id="amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
+       <input placeholder='Enter Amount' onChange={(e)=>{setAmount(e.target.value*Math.pow(10,18))}}></input>
         <button onClick={handleGetQuote}>Get Quote</button>
-        <button onClick={() => handleCheckAllowance(quoteData)}>Check Allowance</button> {/* Pass quoteData */}
-        <button onClick={() => executeTransaction(token1Address, token1Address, quoteData)}>Execute</button>
+        <button onClick={() => handleCheckAllowance(quoteData)}>Check Allowance</button> 
+        <button onClick={handleExecute}>Execute</button>
       </div>
       <div>
         <p>

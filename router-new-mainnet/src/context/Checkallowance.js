@@ -663,7 +663,7 @@ const checkAndSetAllowance = async (wallet, tokenAddress, approvalAddress, amoun
         return;
     }
     const erc20 = new ethers.Contract(tokenAddress, erc20_abi, wallet);
-    console.log("The erc20 allownce is : ",erc20)
+    console.log("The erc20 is : ",erc20)
     // console.log("wallet.getAddress() : " ,await wallet.getAddress())
     const x=wallet.getAddress();
     console.log("approvalAddress: ",approvalAddress)
@@ -684,3 +684,5 @@ const checkAndSetAllowance = async (wallet, tokenAddress, approvalAddress, amoun
 };
 
 export default checkAndSetAllowance;
+
+

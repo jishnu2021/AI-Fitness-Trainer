@@ -82,6 +82,7 @@ const WalletProvider = React.memo(({ children }) => {
         return false;
     }
 
+
     const connectWallet = async () => {
         console.log("connectWallet runs....")
         try {
